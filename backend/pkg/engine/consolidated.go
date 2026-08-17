@@ -184,3 +184,35 @@ func (cb *ConsolidatedOrderBook) DetectArbitrage() *types.ArbitrageOpportunity {
 	// No crossed market / arbitrage exists -> return nil.
 	return nil
 }
+
+// GetSnapshot generates a ConsolidatedBook snapshot with the specified depth of bids and asks.
+func (cb *ConsolidatedOrderBook) GetSnapshot(depth int) types.ConsolidatedBook {
+	if depth <= 0 {
+		depth = 20
+	}
+
+	bestBidPrice, _, _ := cb.globalBids.PeekBest()
+	bestAskPrice, _, _ := cb.globalAsks.PeekBest()
+
+	var midPrice, spread, spreadPct float64
+	if bestBidPrice > 0 && bestAskPrice > 0 {
+		spread = bestAskPrice - bestBidPrice
+		midPrice = (bestAskPrice + bestBidPrice) / 2.0
+		if midPrice > 0 {
+			spreadPct = (spread / midPrice) * 100.0
+		}
+	}
+
+	return types.ConsolidatedBook{
+		Symbol:      cb.Symbol,
+		BestBid:     bestBidPrice,
+		BestAsk:     bestAskPrice,
+		MidPrice:    midPrice,
+		Spread:      spread,
+		SpreadPct:   spreadPct,
+		Bids:        cb.globalBids.GetTopK(depth),
+		Asks:        cb.globalAsks.GetTopK(depth),
+		LastUpdated: cb.lastUpdated,
+	}
+}
+
