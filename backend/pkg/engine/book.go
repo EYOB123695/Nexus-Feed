@@ -1,121 +1,92 @@
 package engine
 
 import (
-	"sort"
-	"sync"
 	"time"
 
 	"nexus-feed/backend/pkg/types"
 )
 
+// OrderBook represents a high-performance L2 order book for a single exchange and symbol.
 type OrderBook struct {
 	Exchange    string
 	Symbol      string
-	bids        map[float64]float64
-	asks        map[float64]float64
-	mu          sync.RWMutex
+	bids        *SkipList
+	asks        *SkipList
 	lastUpdated time.Time
 }
 
+// NewOrderBook creates a new OrderBook instance for a specific exchange and symbol.
 func NewOrderBook(exchange, symbol string) *OrderBook {
 	return &OrderBook{
 		Exchange:    exchange,
 		Symbol:      symbol,
-		bids:        make(map[float64]float64),
-		asks:        make(map[float64]float64),
+		bids:        NewSkipList(false), // false = Descending order (highest buyer first -> Best Bid at head)
+		asks:        NewSkipList(true),  // true  = Ascending order (lowest seller first -> Best Ask at head)
 		lastUpdated: time.Now(),
 	}
 }
 
+// ApplyTick updates the order book with an incoming market tick.
+// If Quantity <= 0, the price level is removed (cancellation).
+// If Quantity > 0, the price level is updated or inserted in O(log N).
 func (ob *OrderBook) ApplyTick(tick types.MarketTick) {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
+	ob.lastUpdated = tick.Timestamp
+	if ob.lastUpdated.IsZero() {
+		ob.lastUpdated = time.Now()
+	}
 
-	ob.lastUpdated = time.Now()
-	targetMap := ob.bids
+	updatedAtMicros := ob.lastUpdated.UnixNano() / 1000
+
+	// Handle BID (Buy side)
+	if tick.Side == types.SideBid {
+		if tick.Quantity <= 0 {
+			ob.bids.Delete(tick.Price)
+		} else {
+			ob.bids.InsertOrUpdate(tick.Price, tick.Quantity, ob.Exchange, updatedAtMicros)
+		}
+		return
+	}
+
+	// Handle ASK (Sell side)
 	if tick.Side == types.SideAsk {
-		targetMap = ob.asks
-	}
-
-	if tick.Quantity <= 0 {
-		delete(targetMap, tick.Price)
-	} else {
-		targetMap[tick.Price] = tick.Quantity
+		if tick.Quantity <= 0 {
+			ob.asks.Delete(tick.Price)
+		} else {
+			ob.asks.InsertOrUpdate(tick.Price, tick.Quantity, ob.Exchange, updatedAtMicros)
+		}
 	}
 }
 
+// GetBestBid returns the highest price willing to buy and its quantity in instant O(1) time.
 func (ob *OrderBook) GetBestBid() (float64, float64) {
-	ob.mu.RLock()
-	defer ob.mu.RUnlock()
-
-	bestPrice := 0.0
-	bestQty := 0.0
-	for price, qty := range ob.bids {
-		if price > bestPrice {
-			bestPrice = price
-			bestQty = qty
-		}
+	price, qty, exists := ob.bids.PeekBest()
+	if !exists {
+		return 0.0, 0.0
 	}
-	return bestPrice, bestQty
+	return price, qty
 }
 
+// GetBestAsk returns the lowest price willing to sell and its quantity in instant O(1) time.
 func (ob *OrderBook) GetBestAsk() (float64, float64) {
-	ob.mu.RLock()
-	defer ob.mu.RUnlock()
-
-	bestPrice := 0.0
-	bestQty := 0.0
-	for price, qty := range ob.asks {
-		if bestPrice == 0.0 || price < bestPrice {
-			bestPrice = price
-			bestQty = qty
-		}
+	price, qty, exists := ob.asks.PeekBest()
+	if !exists {
+		return 0.0, 0.0
 	}
-	return bestPrice, bestQty
+	return price, qty
 }
 
+// GetSnapshot extracts the top K levels of bids and asks in O(K) time without sorting.
 func (ob *OrderBook) GetSnapshot(depth int) types.OrderBookSnapshot {
-	ob.mu.RLock()
-	defer ob.mu.RUnlock()
-
-	bidLevels := make([]types.PriceLevel, 0, len(ob.bids))
-	for p, q := range ob.bids {
-		bidLevels = append(bidLevels, types.PriceLevel{
-			Price:     p,
-			Quantity:  q,
-			Exchange:  ob.Exchange,
-			UpdatedAt: ob.lastUpdated.UnixNano() / 1000,
-		})
-	}
-	sort.Slice(bidLevels, func(i, j int) bool {
-		return bidLevels[i].Price > bidLevels[j].Price
-	})
-
-	askLevels := make([]types.PriceLevel, 0, len(ob.asks))
-	for p, q := range ob.asks {
-		askLevels = append(askLevels, types.PriceLevel{
-			Price:     p,
-			Quantity:  q,
-			Exchange:  ob.Exchange,
-			UpdatedAt: ob.lastUpdated.UnixNano() / 1000,
-		})
-	}
-	sort.Slice(askLevels, func(i, j int) bool {
-		return askLevels[i].Price < askLevels[j].Price
-	})
-
-	if len(bidLevels) > depth {
-		bidLevels = bidLevels[:depth]
-	}
-	if len(askLevels) > depth {
-		askLevels = askLevels[:depth]
-	}
-
 	return types.OrderBookSnapshot{
 		Symbol:    ob.Symbol,
 		Exchange:  ob.Exchange,
-		Bids:      bidLevels,
-		Asks:      askLevels,
+		Bids:      ob.bids.GetTopK(depth),
+		Asks:      ob.asks.GetTopK(depth),
 		Timestamp: ob.lastUpdated,
 	}
+}
+
+// DepthCount returns the total number of active bid and ask price levels.
+func (ob *OrderBook) DepthCount() (int, int) {
+	return ob.bids.Count(), ob.asks.Count()
 }
