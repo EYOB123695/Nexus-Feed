@@ -108,7 +108,7 @@ func (b *BinanceAdapter) connectAndStream(ctx context.Context) error {
 		clean := strings.ToLower(strings.ReplaceAll(sym, "-", ""))
 		streamNames = append(streamNames, clean+"@bookTicker")
 	}
-	url := fmt.Sprintf("wss://stream.binance.com:9443/stream?streams=%s", strings.Join(streamNames, "/"))
+	url := fmt.Sprintf("wss://data-stream.binance.vision/stream?streams=%s", strings.Join(streamNames, "/"))
 
 	// Dial the Binance WebSocket server
 	dialer := websocket.DefaultDialer
