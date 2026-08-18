@@ -82,6 +82,20 @@ func main() {
 		wsHub.ServeWS(w, r)
 	})
 
+	// Loader.io Domain Verification endpoint
+	mux.HandleFunc("/loaderio-07d7114154811d522ccb87b78f736542.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("loaderio-07d7114154811d522ccb87b78f736542"))
+	})
+	mux.HandleFunc("/loaderio-07d7114154811d522ccb87b78f736542/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("loaderio-07d7114154811d522ccb87b78f736542"))
+	})
+	mux.HandleFunc("/loaderio-07d7114154811d522ccb87b78f736542", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("loaderio-07d7114154811d522ccb87b78f736542"))
+	})
+
 	// Health check endpoint (http://localhost:8080/api/health)
 	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
