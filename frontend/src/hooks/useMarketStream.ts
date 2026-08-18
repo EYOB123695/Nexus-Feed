@@ -10,8 +10,12 @@ import {
   WSMessage,
 } from '@/types/market';
 
-// WebSocket URL: uses environment variable if available, otherwise falls back to local Go server on port 8080
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws';
+// WebSocket URL: uses environment variable if available, otherwise dynamically matches hostname:8080/ws
+const WS_BASE_URL =
+  process.env.NEXT_PUBLIC_WS_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? `ws://${window.location.hostname}:8080/ws`
+    : 'ws://localhost:8080/ws');
 
 /**
  * HELPER FUNCTION: enrichPriceLevels
@@ -178,8 +182,8 @@ export function useMarketStream(initialSymbol: MarketSymbol = 'BTC-USDT') {
       };
 
       // 3. ON ERROR
-      ws.onerror = (err) => {
-        console.error('[useMarketStream] WebSocket error:', err);
+      ws.onerror = () => {
+        // Browser WebSocket triggers onerror with an empty Event object when connection is pending/refused
         setConnectionStatus('ERROR');
       };
 

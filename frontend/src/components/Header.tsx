@@ -58,6 +58,8 @@ export default function Header({
               return (
                 <button
                   key={sym}
+                  type="button"
+                  suppressHydrationWarning
                   onClick={() => onSelectSymbol(sym)}
                   className={`px-3 py-1 rounded-md text-xs font-mono font-semibold transition-all duration-150 ${
                     isActive
@@ -120,15 +122,11 @@ export default function Header({
           <div className="hidden md:flex items-center gap-1.5 text-[11px] font-mono">
             <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#F0B90B]/10 text-[#F0B90B] border border-[#F0B90B]/30">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F0B90B] animate-pulse" />
-              Binance
+              Binance (Live)
             </span>
             <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#0052FF]/10 text-[#3B82F6] border border-[#0052FF]/30">
               <span className="w-1.5 h-1.5 rounded-full bg-[#0052FF] animate-pulse" />
-              Coinbase
-            </span>
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#5741D9]/10 text-[#A855F7] border border-[#5741D9]/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5741D9] animate-pulse" />
-              Kraken
+              Coinbase (Live)
             </span>
           </div>
 

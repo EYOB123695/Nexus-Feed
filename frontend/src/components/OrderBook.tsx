@@ -95,6 +95,8 @@ export default function OrderBook({ book }: OrderBookProps) {
           {[15, 20, 30, 50].map((limit) => (
             <button
               key={limit}
+              type="button"
+              suppressHydrationWarning
               onClick={() => setDepthLimit(limit)}
               className={`px-2 py-0.5 text-[10px] rounded font-semibold transition-all ${
                 depthLimit === limit

@@ -1,6 +1,10 @@
 import { ConsolidatedBook, HealthStatus, SystemTelemetry } from '@/types/market';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? `http://${window.location.hostname}:8080`
+    : 'http://localhost:8080');
 
 /**
  * Fetch engine performance, conflation metrics, and active client counts.
@@ -8,7 +12,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
  */
 export async function fetchTelemetry(): Promise<SystemTelemetry> {
   const res = await fetch(`${API_BASE_URL}/api/metrics`, {
-    headers: { 'Content-Type': 'application/json' },
     cache: 'no-store', // Always fetch fresh metrics
   });
 
@@ -25,7 +28,6 @@ export async function fetchTelemetry(): Promise<SystemTelemetry> {
  */
 export async function fetchOrderBookSnapshot(symbol: string = 'BTC-USDT'): Promise<ConsolidatedBook> {
   const res = await fetch(`${API_BASE_URL}/api/book?symbol=${encodeURIComponent(symbol)}`, {
-    headers: { 'Content-Type': 'application/json' },
     cache: 'no-store',
   });
 
@@ -42,7 +44,7 @@ export async function fetchOrderBookSnapshot(symbol: string = 'BTC-USDT'): Promi
  */
 export async function fetchHealth(): Promise<HealthStatus> {
   const res = await fetch(`${API_BASE_URL}/api/health`, {
-    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
   });
 
   if (!res.ok) {

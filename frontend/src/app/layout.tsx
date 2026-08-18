@@ -24,8 +24,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#080B11] text-gray-100 min-h-screen`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#080B11] text-gray-100 min-h-screen`}
+        suppressHydrationWarning
+      >
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

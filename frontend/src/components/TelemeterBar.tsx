@@ -10,7 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchTelemetry } from '@/lib/api';
 //  Imports our typed API helper function from api.ts that makes the HTTP GET /api/metrics call.
 
-import { Activity, Cpu, Gauge, Layers, Server, Users } from 'lucide-react';
+import { Activity, Cpu, Gauge, Layers, Server } from 'lucide-react';
 
 
 export default function TelemetryBar() {
@@ -133,13 +133,13 @@ export default function TelemetryBar() {
 
                 </div>
 
-                {/* RIGHT: ACTIVE BROWSER WEBSOCKET CLIENTS */}
+                {/* RIGHT: ENGINE TICKS PROCESSED */}
                 <div className="flex items-center gap-4 text-gray-400 text-[11px]">
                     <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Active WS Clients:</span>
-                        <span className="text-emerald-400 font-bold font-mono">
-                            {stream?.active_ws_clients ?? 1}
+                        <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Total Ticks:</span>
+                        <span className="text-white font-bold font-mono">
+                            {engine?.ticks_processed ? engine.ticks_processed.toLocaleString() : 0}
                         </span>
                     </div>
                 </div>

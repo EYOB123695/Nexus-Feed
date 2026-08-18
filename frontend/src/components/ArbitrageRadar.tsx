@@ -76,6 +76,8 @@ export default function ArbitrageRadar({
         {/* Clear history button: Only visible if opportunities exist */}
         {opportunities.length > 0 && (
           <button
+            type="button"
+            suppressHydrationWarning
             onClick={onClearHistory}
             className="text-[10px] text-gray-400 hover:text-gray-200 bg-gray-900/80 hover:bg-gray-800 px-2 py-1 rounded border border-gray-800 transition-colors"
           >
@@ -97,6 +99,7 @@ export default function ArbitrageRadar({
             <span className="text-[11px] text-gray-500">Trade Size ($):</span>
             <input
               type="number"
+              suppressHydrationWarning
               value={simCapital}
               onChange={(e) => setSimCapital(Math.max(0, Number(e.target.value)))}
               className="w-24 bg-gray-900 border border-gray-700 rounded px-2 py-0.5 text-right text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
