@@ -15,6 +15,8 @@ import (
 	"os"
 	// signal listens for Ctrl+C and SIGTERM termination signals
 	"os/signal"
+	// strings formats dynamic cloud port strings
+	"strings"
 	// syscall defines standard OS signal constants
 	"syscall"
 	// time manages timeouts and timestamps
@@ -153,8 +155,15 @@ func main() {
 		mux.ServeHTTP(w, r)
 	})
 
-	// Configure HTTP server
-	port := ":8080"
+	// Configure dynamic cloud port (e.g. Render, Railway, AWS, Docker)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
+
 	server := &http.Server{
 		Addr:    port,
 		Handler: corsHandler,
