@@ -63,16 +63,14 @@ func main() {
 	// Step 4: Define tracked market symbols
 	symbols := []string{"BTC-USDT", "ETH-USDT", "SOL-USDT"}
 
-	// Step 5: Initialize Live Ingestion Adapters for Binance, Coinbase, and Kraken
+	// Step 5: Initialize Live Ingestion Adapters for Binance and Coinbase
 	binanceAdapter := ingestion.NewBinanceAdapter(symbols, dispatcher)
 	coinbaseAdapter := ingestion.NewCoinbaseAdapter(symbols, dispatcher)
-	krakenAdapter := ingestion.NewKrakenAdapter(symbols, dispatcher)
 
-	// Start all 3 live exchange feeds concurrently
+	// Start live exchange feeds concurrently
 	go binanceAdapter.Start(ctx)
 	go coinbaseAdapter.Start(ctx)
-	go krakenAdapter.Start(ctx)
-	log.Printf("[Ingestion] Live feeds started for Binance, Coinbase, Kraken. Symbols: %v\n", symbols)
+	log.Printf("[Ingestion] Live feeds active for Binance & Coinbase. Symbols: %v\n", symbols)
 
 	// Step 6: Set up HTTP router & endpoints
 	mux := http.NewServeMux()
@@ -143,11 +141,23 @@ func main() {
 		json.NewEncoder(w).Encode(snapshot)
 	})
 
+	// Configure global CORS handler (supporting preflight OPTIONS and all origins)
+	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
+
 	// Configure HTTP server
 	port := ":8080"
 	server := &http.Server{
 		Addr:    port,
-		Handler: mux,
+		Handler: corsHandler,
 	}
 
 	// Step 7: Launch HTTP server in background goroutine
