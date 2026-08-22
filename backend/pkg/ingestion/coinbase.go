@@ -1,58 +1,41 @@
 package ingestion
 
 import (
-	// context manages lifecycle and cancellation of the Coinbase worker
 	"context"
-	// json serializes subscription requests and parses incoming ticker payloads
 	"encoding/json"
-	// fmt formats error messages and URLs
 	"fmt"
-	// log writes connection and error logs
 	"log"
-	// strconv converts string prices and sizes from Coinbase into float64
 	"strconv"
-	// strings handles symbol transformations and case matching
 	"strings"
-	// time provides timestamps and reconnection backoff delays
 	"time"
 
-	// websocket provides client dialer for Coinbase's live WebSocket feed
 	"github.com/gorilla/websocket"
-	// engine provides the Dispatcher to push parsed ticks into the core engine
 	"nexus-feed/backend/pkg/engine"
-	// types provides the MarketTick data model and side constants
 	"nexus-feed/backend/pkg/types"
 )
 
-// coinbaseSubscriptionMessage is the subscription handshake JSON sent to Coinbase on connection.
 type coinbaseSubscriptionMessage struct {
-	Type       string   `json:"type"`        // "subscribe"
-	ProductIDs []string `json:"product_ids"` // e.g. ["BTC-USD", "ETH-USD"]
-	Channels   []string `json:"channels"`    // e.g. ["ticker"]
+	Type       string   `json:"type"`
+	ProductIDs []string `json:"product_ids"`
+	Channels   []string `json:"channels"`
 }
 
-// coinbaseTickerEvent represents the real-time best bid, best ask, and trade state from Coinbase.
 type coinbaseTickerEvent struct {
-	Type        string    `json:"type"`          // "ticker"
-	Sequence    int64     `json:"sequence"`      // Sequence number
-	ProductID   string    `json:"product_id"`    // e.g. "BTC-USD"
-	Price       string    `json:"price"`         // Last trade price
-	BestBid     string    `json:"best_bid"`      // Current best bid price
-	BestBidSize string    `json:"best_bid_size"` // Current best bid quantity
-	BestAsk     string    `json:"best_ask"`      // Current best ask price
-	BestAskSize string    `json:"best_ask_size"` // Current best ask quantity
-	Time        time.Time `json:"time"`          // Event timestamp from Coinbase
+	Type        string    `json:"type"`
+	Sequence    int64     `json:"sequence"`
+	ProductID   string    `json:"product_id"`
+	Price       string    `json:"price"`
+	BestBid     string    `json:"best_bid"`
+	BestBidSize string    `json:"best_bid_size"`
+	BestAsk     string    `json:"best_ask"`
+	BestAskSize string    `json:"best_ask_size"`
+	Time        time.Time `json:"time"`
 }
 
 // CoinbaseAdapter manages a live WebSocket connection to Coinbase Exchange.
 type CoinbaseAdapter struct {
-	// symbols is the list of normalized pairs to track (e.g. ["BTC-USDT", "ETH-USDT"])
-	symbols []string
-
-	// dispatcher receives normalized market ticks
-	dispatcher *engine.Dispatcher
-
-	// reconnectDelay is the duration to wait before reconnecting after a disconnect
+	symbols        []string
+	dispatcher     *engine.Dispatcher
 	reconnectDelay time.Duration
 }
 
@@ -98,13 +81,11 @@ func (c *CoinbaseAdapter) connectAndStream(ctx context.Context) error {
 	}
 	defer conn.Close()
 
-	// Convert normalized symbols (e.g. "BTC-USDT") into Coinbase product IDs (e.g. "BTC-USD")
 	var productIDs []string
 	for _, sym := range c.symbols {
 		productIDs = append(productIDs, c.toCoinbaseProductID(sym))
 	}
 
-	// Send subscription payload for the "ticker" channel
 	subMsg := coinbaseSubscriptionMessage{
 		Type:       "subscribe",
 		ProductIDs: productIDs,
@@ -117,7 +98,6 @@ func (c *CoinbaseAdapter) connectAndStream(ctx context.Context) error {
 
 	log.Printf("[Coinbase] Connected successfully. Subscribed to: %v", productIDs)
 
-	// Process incoming ticker updates
 	for {
 		select {
 		case <-ctx.Done():
@@ -136,20 +116,16 @@ func (c *CoinbaseAdapter) connectAndStream(ctx context.Context) error {
 				continue
 			}
 
-			// Only process "ticker" messages (ignore "subscriptions" handshake response)
 			if event.Type != "ticker" {
 				continue
 			}
 
-			// Parse Bid price & size
 			bidPrice, errBidP := strconv.ParseFloat(event.BestBid, 64)
 			bidSize, errBidS := strconv.ParseFloat(event.BestBidSize, 64)
 
-			// Parse Ask price & size
 			askPrice, errAskP := strconv.ParseFloat(event.BestAsk, 64)
 			askSize, errAskS := strconv.ParseFloat(event.BestAskSize, 64)
 
-			// Normalize product ID back to standard system symbol (e.g. "BTC-USD" -> "BTC-USDT")
 			normSymbol := c.normalizeSymbol(event.ProductID)
 
 			// 1. Submit Bid Tick
